@@ -37,7 +37,6 @@ void createContact(int* position, Contact* address){
     char emailAddress[EMAIL_ADDRESS_SIZE];
     // assign an integer to the current value of int pointer.
     int val = *position;
-    printf("Contacts: %d\n", val);
     // get details for our contact.
     collectInput(&name, "Enter name of contact:", NAME_SIZE);
     collectInput(&phoneNumber, "Enter phone number of contact", PHONE_NUMBER_SIZE);
@@ -49,22 +48,13 @@ void createContact(int* position, Contact* address){
     strcpy(contact.phoneNumber, phoneNumber);
     strcpy(contact.emailAddress, emailAddress);
     // check if the current value is less than max number of contacts
-    if(val <= MAX_CONTACTS){
+    if(val < MAX_CONTACTS){
         // assign our contact to the contacts pointer.
         *(address+val) = contact;
     }
     else{
-        // if we are overflowing, try and get more memory for our pointer.
-        address = (Contact *) realloc(address, sizeof(Contact) * val);
-        // if it fails, print error message and return.
-        if(address == NULL){
-            printf("Could not create contact!\n");
-            return;
-        }
-        else{
-            // otherwise store the new contact in our new pointer.
-            *(address+val) = contact;
-        }
+       printf("Maximum Contacts reached.");
+       return;
     }
     // increment our position by 1.
     *position = val + 1;
@@ -84,6 +74,75 @@ void viewContacts(Contact *contacts, int numberofContacts){
     }
 }
 
+
+
+Contact* loadContacts(int* numberofContacts){
+    // create contacts pointer.
+    Contact *contacts = (Contact *) malloc(sizeof(Contact)*MAX_CONTACTS);
+    // define maximum size as name + phone number + email address + 10
+    int limit = NAME_SIZE + PHONE_NUMBER_SIZE + EMAIL_ADDRESS_SIZE + 10;
+    // create string called buffer;
+    char buffer[limit];
+    // open our file.
+    FILE *fp = fopen("contacts.txt", "r");
+    // check if file exists
+    if(fp == NULL){
+        printf("No contacts found.\n");
+        return contacts;
+    }
+    // define our index.
+    short int i = 0;
+    // go through all lines in file
+    while(fgets(buffer, limit, fp)){
+        // create contact object.
+        Contact contact;
+        // define string pointer for our string splits
+        char* data = strtok(buffer, " ");
+        // define another index for string split
+        short int j = 0;
+        while(data != NULL){
+            // switch case the index.
+            switch(j){
+                // assign each detail to each contact field.  
+                case 0:
+                    strcpy(contact.name, data);
+                    break;
+                case 1:
+                    strcpy(contact.phoneNumber, data);
+                    break;
+                case 2:
+                    strcpy(contact.emailAddress, data);
+                    break;
+            }
+            // move on to next token.
+            data = strtok(NULL, " ");
+            j++;
+        }
+        *(contacts + i) = contact;
+        i++;        
+    }
+    *numberofContacts = i;
+    return contacts;
+}
+
+void takeAway(Contact *contacts, int numberofContacts){
+    // remove old contacts.txt
+    remove("contacts.txt");
+    // create file pointer for contacts
+    FILE *fp = fopen("contacts.txt", "w");
+    // loop through all contacts
+    for(int i = 0; i < numberofContacts; i++){
+        // define current contact
+        Contact contact = *(contacts+i);
+        // write line in file containing name, phone number and email address
+        fprintf(fp, "%s %s %s\n", contact.name, contact.phoneNumber, contact.emailAddress);
+    }
+    // close file pointer
+    fclose(fp);
+    // display message to the user
+    printf("Created take-away file.\n");
+}
+
 void quitProgram(Contact* contacts){
     // free our contacts pointer.
     free(contacts);
@@ -95,7 +154,8 @@ int main(){
     // define our position tracker.
     int position = 0;
     // create our contacts pointer.
-    Contact *contacts = (Contact*) malloc(sizeof(Contact)*MAX_CONTACTS);
+    Contact *contacts = loadContacts(&position);
+    //Contact *contacts = (Contact*) malloc(sizeof(Contact)*MAX_CONTACTS);
     // create an integer for our input.
     int option;
     while(TRUE){
@@ -113,6 +173,7 @@ int main(){
         else if (option == 3){
             // leave program
             printf("Leaving program\n");
+            takeAway(contacts, position);
             break;
         }
         else{
